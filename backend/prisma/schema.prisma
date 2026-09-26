@@ -1,0 +1,228 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ==============================
+// ENUMS
+// ==============================
+
+enum MessageRole {
+  USER
+  ASSISTANT
+}
+
+enum AgentType {
+  MAINTENANCE
+  ELECTRICAL
+  ACCESS
+  GENERAL
+}
+
+enum DecisionType {
+  AGENT_ROUTING
+  ACTION_ROUTING
+  URGENCY
+  ESCALATION
+}
+
+enum ActionType {
+  ASK_INFORMATION
+  GIVE_INSTRUCTIONS
+  CREATE_INTERVENTION
+  ESCALATE
+  NOTIFY_TECHNICIAN
+}
+
+enum ExecutionStatus {
+  RUNNING
+  SUCCESS
+  FAILURE
+}
+
+enum InterventionCategory {
+  MAINTENANCE
+  ELECTRICAL
+  ACCESS
+  OTHER
+}
+
+enum InterventionPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum InterventionStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+// ==============================
+// USER
+// ==============================
+
+model User {
+  id    String @id @default(uuid())
+  name  String
+  email String @unique
+
+  conversations Conversation[]
+
+  interventions Intervention[] @relation("ReportedInterventions")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ==============================
+// CONVERSATION
+// ==============================
+
+model Conversation {
+  id String @id @default(uuid())
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  messages      Message[]
+  decisions     Decision[]
+  executions    AgentExecution[]
+  interventions Intervention[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// ==============================
+// MESSAGE
+// ==============================
+
+model Message {
+  id String @id @default(uuid())
+
+  conversationId String
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  role    MessageRole
+  content String      @db.Text
+
+  decisions Decision[]
+
+  createdAt DateTime @default(now())
+
+  @@index([conversationId])
+}
+
+// ==============================
+// JEV DECISION
+// ==============================
+
+model Decision {
+  id String @id @default(uuid())
+
+  conversationId String
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  sourceMessageId String?
+
+  sourceMessage Message? @relation(fields: [sourceMessageId], references: [id], onDelete: SetNull)
+
+  type DecisionType
+
+  selectedAgent  AgentType?
+  selectedAction ActionType?
+
+  score         Int?
+  booleanResult Boolean?
+
+  confidence Float
+
+  options  Json?
+  metadata Json?
+
+  executions AgentExecution[]
+
+  createdAt DateTime @default(now())
+
+  @@index([conversationId])
+  @@index([sourceMessageId])
+  @@index([type])
+}
+
+// ==============================
+// AGENT EXECUTION
+// ==============================
+
+model AgentExecution {
+  id String @id @default(uuid())
+
+  conversationId String
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  decisionId String?
+
+  decision Decision? @relation(fields: [decisionId], references: [id], onDelete: SetNull)
+
+  agent  AgentType
+  action ActionType?
+
+  status ExecutionStatus @default(RUNNING)
+
+  input  Json?
+  output Json?
+
+  error String? @db.Text
+
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  @@index([conversationId])
+  @@index([decisionId])
+  @@index([agent])
+}
+
+// ==============================
+// INTERVENTION
+// ==============================
+
+model Intervention {
+  id String @id @default(uuid())
+
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  reportedById String?
+
+  reportedBy User? @relation("ReportedInterventions", fields: [reportedById], references: [id], onDelete: SetNull)
+
+  title       String
+  description String @db.Text
+
+  category InterventionCategory
+  priority InterventionPriority @default(MEDIUM)
+  status   InterventionStatus   @default(OPEN)
+
+  assignedTo String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([conversationId])
+  @@index([reportedById])
+  @@index([status])
+  @@index([priority])
+}
