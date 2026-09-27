@@ -1,0 +1,6 @@
+export enum AgentRoute {
+  MAINTENANCE = 'MAINTENANCE',
+  ELECTRICAL = 'ELECTRICAL',
+  ACCESS = 'ACCESS',
+  GENERAL = 'GENERAL',
+}
