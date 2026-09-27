@@ -5,6 +5,10 @@ import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 
 import { PrismaModule } from './database/prisma.module.js';
+import { DecisionModule } from './decision/decision.module.js';
+import { RoutingModule } from './routing/routing.module.js';
+import { ChatModule } from './chat/chat.module.js';
+
 
 @Module({
   imports: [
@@ -15,6 +19,9 @@ import { PrismaModule } from './database/prisma.module.js';
     }),
 
     PrismaModule,
+    DecisionModule,
+    RoutingModule,
+    ChatModule,
   ],
 
   controllers: [AppController],
